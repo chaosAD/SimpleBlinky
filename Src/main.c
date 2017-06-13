@@ -47,6 +47,15 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+typedef struct Led Led;
+struct Led {
+	int state;
+	int tickstart;
+	GPIO_TypeDef* port;
+	uint16_t pin;
+	int onPeriod;
+	int offPeriod;
+};
 
 /* USER CODE END PV */
 
@@ -56,7 +65,11 @@ static void MX_GPIO_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+void doBlinking(void);
+void blinkLed(Led *led);
+void initLed(Led *led, GPIO_TypeDef* port, uint16_t pin,			\
+			 int onPeriod, int offPeriod);
+void ledWaitAndSwitch(Led *led, int period, int pinState, int nextState);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -67,7 +80,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+//  Led led1;
+//  Led led2;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -90,17 +104,20 @@ int main(void)
   MX_GPIO_Init();
 
   /* USER CODE BEGIN 2 */
-
+//  initLed(&led1, amberLed_GPIO_Port, amberLed_Pin, 500, 500);
+//  initLed(&led2, led7_GPIO_Port, led7_Pin, 150, 150);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+//	  blinkLed(&led1);
+//	  blinkLed(&led2);
+	  doBlinking();
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
   }
   /* USER CODE END 3 */
 
@@ -116,13 +133,12 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -170,9 +186,31 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(amberLed_GPIO_Port, amberLed_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, led24_Pin|led25_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, led26_Pin|led27_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, led21_Pin|led22_Pin|led23_Pin|led7_Pin 
+                          |led8_Pin|led9_Pin|led10_Pin|led11_Pin 
+                          |led28_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, led2_Pin|led3_Pin|led4_Pin|led5_Pin 
+                          |led6_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, led16_Pin|led17_Pin|led18_Pin|led19_Pin 
+                          |led20_Pin|led12_Pin|led13_Pin|led14_Pin 
+                          |led15_Pin|led29_Pin|led30_Pin|led31_Pin 
+                          |led32_Pin|led33_Pin|led34_Pin|led35_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : amberLed_Pin */
   GPIO_InitStruct.Pin = amberLed_Pin;
@@ -180,10 +218,121 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(amberLed_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : led24_Pin led25_Pin */
+  GPIO_InitStruct.Pin = led24_Pin|led25_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : led26_Pin led27_Pin */
+  GPIO_InitStruct.Pin = led26_Pin|led27_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : led21_Pin led22_Pin led23_Pin led4_Pin 
+                           led5_Pin led6_Pin led7_Pin led8_Pin 
+                           led9_Pin led10_Pin led11_Pin led28_Pin */
+  GPIO_InitStruct.Pin = led21_Pin|led22_Pin|led23_Pin|led4_Pin 
+                          |led5_Pin|led6_Pin|led7_Pin|led8_Pin 
+                          |led9_Pin|led10_Pin|led11_Pin|led28_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : led2_Pin led3_Pin */
+  GPIO_InitStruct.Pin = led2_Pin|led3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : led16_Pin led17_Pin led18_Pin led19_Pin 
+                           led20_Pin led12_Pin led13_Pin led14_Pin 
+                           led15_Pin led29_Pin led30_Pin led31_Pin 
+                           led32_Pin led33_Pin led34_Pin led35_Pin */
+  GPIO_InitStruct.Pin = led16_Pin|led17_Pin|led18_Pin|led19_Pin 
+                          |led20_Pin|led12_Pin|led13_Pin|led14_Pin 
+                          |led15_Pin|led29_Pin|led30_Pin|led31_Pin 
+                          |led32_Pin|led33_Pin|led34_Pin|led35_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure peripheral I/O remapping */
+  __HAL_AFIO_REMAP_PD01_ENABLE();
+
 }
 
 /* USER CODE BEGIN 4 */
+void initLed(Led *led, GPIO_TypeDef* port, uint16_t pin,			\
+			int onPeriod, int offPeriod) {
+	led->state = 0;
+	led->tickstart = 0;
+	led->port = port;
+	led->pin = pin;
+	led->onPeriod = onPeriod;
+	led->offPeriod = offPeriod;
+}
 
+void ledWaitAndSwitch(Led *led, int period, int pinState, int nextState) {
+	if((HAL_GetTick() - led->tickstart) > period) {
+		HAL_GPIO_WritePin(led->port, led->pin, pinState);
+		led->tickstart = HAL_GetTick();
+		led->state = nextState;
+	}
+}
+
+void blinkLed(Led *led) {
+  switch(led->state) {
+  case 0:	// WAIT TO ON
+	  ledWaitAndSwitch(led, led->offPeriod, GPIO_PIN_RESET, 1);
+	  break;
+  case 1:   // WAIT TO OFF
+	  ledWaitAndSwitch(led, led->onPeriod, GPIO_PIN_SET, 0);
+	  break;
+  default:
+	  led->state = 0;
+  }
+}
+
+void doBlinking() {
+    HAL_GPIO_TogglePin(amberLed_GPIO_Port, amberLed_Pin);
+    HAL_GPIO_TogglePin(led2_GPIO_Port, led2_Pin);
+    HAL_GPIO_TogglePin(led3_GPIO_Port, led3_Pin);
+    HAL_GPIO_TogglePin(led4_GPIO_Port, led4_Pin);
+    HAL_GPIO_TogglePin(led5_GPIO_Port, led5_Pin);
+    HAL_GPIO_TogglePin(led6_GPIO_Port, led6_Pin);
+    HAL_GPIO_TogglePin(led7_GPIO_Port, led7_Pin);
+    HAL_GPIO_TogglePin(led8_GPIO_Port, led8_Pin);
+    HAL_GPIO_TogglePin(led9_GPIO_Port, led9_Pin);
+    HAL_GPIO_TogglePin(led10_GPIO_Port, led10_Pin);
+    HAL_GPIO_TogglePin(led11_GPIO_Port, led11_Pin);
+    HAL_GPIO_TogglePin(led12_GPIO_Port, led12_Pin);
+    HAL_GPIO_TogglePin(led13_GPIO_Port, led13_Pin);
+    HAL_GPIO_TogglePin(led14_GPIO_Port, led14_Pin);
+    HAL_GPIO_TogglePin(led15_GPIO_Port, led15_Pin);
+    HAL_GPIO_TogglePin(led16_GPIO_Port, led16_Pin);
+    HAL_GPIO_TogglePin(led17_GPIO_Port, led17_Pin);
+    HAL_GPIO_TogglePin(led18_GPIO_Port, led18_Pin);
+    HAL_GPIO_TogglePin(led19_GPIO_Port, led19_Pin);
+    HAL_GPIO_TogglePin(led20_GPIO_Port, led20_Pin);
+    HAL_GPIO_TogglePin(led21_GPIO_Port, led21_Pin);
+    HAL_GPIO_TogglePin(led22_GPIO_Port, led22_Pin);
+    HAL_GPIO_TogglePin(led23_GPIO_Port, led23_Pin);
+    HAL_GPIO_TogglePin(led24_GPIO_Port, led24_Pin);
+    HAL_GPIO_TogglePin(led25_GPIO_Port, led25_Pin);
+    HAL_GPIO_TogglePin(led26_GPIO_Port, led26_Pin);
+    HAL_GPIO_TogglePin(led27_GPIO_Port, led27_Pin);
+    HAL_GPIO_TogglePin(led28_GPIO_Port, led28_Pin);
+    HAL_GPIO_TogglePin(led29_GPIO_Port, led29_Pin);
+    HAL_GPIO_TogglePin(led30_GPIO_Port, led30_Pin);
+    HAL_GPIO_TogglePin(led31_GPIO_Port, led31_Pin);
+    HAL_GPIO_TogglePin(led32_GPIO_Port, led32_Pin);
+    HAL_GPIO_TogglePin(led33_GPIO_Port, led33_Pin);
+    HAL_GPIO_TogglePin(led34_GPIO_Port, led34_Pin);
+    HAL_GPIO_TogglePin(led35_GPIO_Port, led35_Pin);
+    HAL_Delay(500);
+}
 /* USER CODE END 4 */
 
 /**
